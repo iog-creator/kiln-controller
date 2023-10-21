@@ -20,7 +20,7 @@ def recordprofile(csvfile, targettemp):
         exit(1)
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
-    sys.path.insert(0, script_dir + '/lib/')
+    sys.path.insert(0, f'{script_dir}/lib/')
 
     from oven import RealOven, SimulatedOven
 
@@ -30,11 +30,7 @@ def recordprofile(csvfile, targettemp):
     csvout.writerow(['time', 'temperature'])
 
     # construct the oven
-    if config.simulate:
-        oven = SimulatedOven()
-    else:
-        oven = RealOven()
-
+    oven = SimulatedOven() if config.simulate else RealOven()
     # Main loop:
     #
     # * heat the oven to the target temperature at maximum burn.
@@ -65,7 +61,7 @@ def recordprofile(csvfile, targettemp):
                 if temp < targettemp:
                     break
 
-            print("stage = %s, actual = %s, target = %s" % (stage,temp,targettemp))
+            print(f"stage = {stage}, actual = {temp}, target = {targettemp}")
             time.sleep(1)
 
         f.close()
@@ -162,9 +158,9 @@ def calculate(filename, tangentdivisor, showplot):
     Kd = Kp * Td
 
     # output to the user
-    print("pid_kp = %s" % (Kp))
-    print("pid_ki = %s" % (1 / Ki))
-    print("pid_kd = %s" % (Kd))
+    print(f"pid_kp = {Kp}")
+    print(f"pid_ki = {1 / Ki}")
+    print(f"pid_kd = {Kd}")
 
 
     if showplot:
@@ -205,4 +201,4 @@ if __name__ == "__main__":
         exit(1)
 
     else:
-        raise NotImplementedError("Unknown mode %s" % args.mode)
+        raise NotImplementedError(f"Unknown mode {args.mode}")

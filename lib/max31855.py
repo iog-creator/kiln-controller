@@ -42,12 +42,12 @@ class MAX31855(object):
         self.read()
         self.checkErrors()
         #return getattr(self, "to_" + self.units)(self.data_to_tc_temperature())
-        return getattr(self, "to_" + self.units)(self.data_to_LinearizedTempC())
+        return getattr(self, f"to_{self.units}")(self.data_to_LinearizedTempC())
 
     def get_rj(self):
         '''Reads SPI bus and returns current value of reference junction.'''
         self.read()
-        return getattr(self, "to_" + self.units)(self.data_to_rj_temperature())
+        return getattr(self, f"to_{self.units}")(self.data_to_rj_temperature())
 
     def read(self):
         '''Reads 32 bits of the SPI bus & stores as an integer in self.data.'''
@@ -55,7 +55,7 @@ class MAX31855(object):
         # Select the chip
         GPIO.output(self.cs_pin, GPIO.LOW)
         # Read in 32 bits
-        for i in range(32):
+        for _ in range(32):
             GPIO.output(self.clock_pin, GPIO.LOW)
             bytesin = bytesin << 1
             if (GPIO.input(self.data_pin)):
@@ -244,20 +244,20 @@ if __name__ == "__main__":
     clock_pin = 23
     data_pin = 22
     units = "f"
-    thermocouples = []
-    for cs_pin in cs_pins:
-        thermocouples.append(MAX31855(cs_pin, clock_pin, data_pin, units))
+    thermocouples = [
+        MAX31855(cs_pin, clock_pin, data_pin, units) for cs_pin in cs_pins
+    ]
     running = True
-    while(running):
+    while running:
         try:
             for thermocouple in thermocouples:
                 rj = thermocouple.get_rj()
                 try:
                     tc = thermocouple.get()
                 except MAX31855Error as e:
-                    tc = "Error: "+ e.value
+                    tc = f"Error: {e.value}"
                     running = False
-                print("tc: {} and rj: {}".format(tc, rj))
+                print(f"tc: {tc} and rj: {rj}")
             time.sleep(1)
         except KeyboardInterrupt:
             running = False

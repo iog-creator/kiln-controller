@@ -55,7 +55,7 @@ class Board(object):
                 #from max31855 import MAX31855, MAX31855Error
                 self.name='MAX31855'
                 self.active = True
-                log.info("import %s " % (self.name))
+                log.info(f"import {self.name} ")
             except ImportError:
                 msg = "max31855 config set, but import failed"
                 log.warning(msg)
@@ -65,7 +65,7 @@ class Board(object):
                 #from max31856 import MAX31856, MAX31856Error
                 self.name='MAX31856'
                 self.active = True
-                log.info("import %s " % (self.name))
+                log.info(f"import {self.name} ")
             except ImportError:
                 msg = "max31856 config set, but import failed"
                 log.warning(msg)
@@ -156,7 +156,9 @@ class TempSensorReal(TempSensor):
                 self.ok_count += 1
 
             else:
-                log.error("Problem reading temp N/C:%s GND:%s VCC:%s ???:%s" % (self.noConnection,self.shortToGround,self.shortToVCC,self.unknownError))
+                log.error(
+                    f"Problem reading temp N/C:{self.noConnection} GND:{self.shortToGround} VCC:{self.shortToVCC} ???:{self.unknownError}"
+                )
                 self.bad_count += 1
 
             if len(temps):
@@ -199,7 +201,7 @@ class Oven(threading.Thread):
             log.info("Refusing to start profile - thermocouple unknown error")
             return
 
-        log.info("Running schedule %s" % profile.name)
+        log.info(f"Running schedule {profile.name}")
         self.profile = profile
         self.totaltime = profile.get_duration()
         self.state = "RUNNING"
@@ -349,11 +351,7 @@ class SimulatedOven(Oven):
         self.heating_energy(pid)
         self.temp_changes()
 
-        # self.heat is for the front end to display if the heat is on
-        self.heat = 0.0
-        if heat_on > 0:
-            self.heat = heat_on
-
+        self.heat = heat_on if heat_on > 0 else 0.0
         log.info("simulation: -> %dW heater: %.0f -> %dW oven: %.0f -> %dW env"            % (int(self.p_heat * pid),
             self.t_h,
             int(self.p_ho),
@@ -400,11 +398,7 @@ class RealOven(Oven):
         heat_on = float(self.time_step * pid)
         heat_off = float(self.time_step * (1 - pid))
 
-        # self.heat is for the front end to display if the heat is on
-        self.heat = 0.0
-        if heat_on > 0:
-            self.heat = 1.0
-
+        self.heat = 1.0 if heat_on > 0 else 0.0
         if heat_on:
             self.output.heat(heat_on)
         if heat_off:
@@ -427,7 +421,7 @@ class Profile():
         self.data = sorted(obj["data"])
 
     def get_duration(self):
-        return max([t for (t, x) in self.data])
+        return max(t for (t, x) in self.data)
 
     def get_surrounding_points(self, time):
         if time > self.get_duration():
@@ -451,8 +445,7 @@ class Profile():
         (prev_point, next_point) = self.get_surrounding_points(time)
 
         incl = float(next_point[1] - prev_point[1]) / float(next_point[0] - prev_point[0])
-        temp = prev_point[1] + (time - prev_point[0]) * incl
-        return temp
+        return prev_point[1] + (time - prev_point[0]) * incl
 
 
 class PID():
@@ -493,11 +486,7 @@ class PID():
         self.lastNow = now
 
         # not actively cooling, so
-        if output < 0:
-            output = 0
-
-        output = float(output / window_size)
-
+        output = max(output, 0)
         if out4logs > 0:
 #            log.info("pid percents pid=%0.2f p=%0.2f i=%0.2f d=%0.2f" % (out4logs,
 #                ((self.kp * error)/out4logs)*100,
@@ -508,4 +497,4 @@ class PID():
                 self.iterm,
                 self.kd * dErr))
 
-        return output
+        return float(output / window_size)
