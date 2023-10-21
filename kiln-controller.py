@@ -28,7 +28,7 @@ log = logging.getLogger("kiln-controller")
 log.info("Starting kiln controller")
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
-sys.path.insert(0, script_dir + '/lib/')
+sys.path.insert(0, f'{script_dir}/lib/')
 profile_path = os.path.join(script_dir, "storage", "profiles")
 
 from oven import SimulatedOven, RealOven, Profile
@@ -56,18 +56,18 @@ def handle_api():
     # run a kiln schedule
     if bottle.request.json['cmd'] == 'run':
         wanted = bottle.request.json['profile']
-        log.info('api requested run of profile = %s' % wanted)
+        log.info(f'api requested run of profile = {wanted}')
 
         # start at a specific minute in the schedule
         # for restarting and skipping over early parts of a schedule
-        startat = 0;      
+        startat = 0;
         if 'startat' in bottle.request.json:
             startat = bottle.request.json['startat']
 
         # get the wanted profile/kiln schedule
         profile = find_profile(wanted)
         if profile is None:
-            return { "success" : False, "error" : "profile %s not found" % wanted }
+            return {"success": False, "error": f"profile {wanted} not found"}
 
         # FIXME juggling of json should happen in the Profile class
         profile_json = json.dumps(profile)
@@ -90,15 +90,14 @@ def find_profile(wanted):
     profiles = get_profiles()
     json_profiles = json.loads(profiles)
 
-    # find the wanted profile
-    for profile in json_profiles:
-        if profile['name'] == wanted:
-            return profile
-    return None
+    return next(
+        (profile for profile in json_profiles if profile['name'] == wanted),
+        None,
+    )
 
 @app.route('/picoreflow/:filename#.*#')
 def send_static(filename):
-    log.debug("serving %s" % filename)
+    log.debug(f"serving {filename}")
     return bottle.static_file(filename, root=os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), "public"))
 
 
@@ -116,14 +115,12 @@ def handle_control():
     log.info("websocket (control) opened")
     while True:
         try:
-            message = wsock.receive()
-            if message:
-                log.info("Received (control): %s" % message)
+            if message := wsock.receive():
+                log.info(f"Received (control): {message}")
                 msgdict = json.loads(message)
                 if msgdict.get("cmd") == "RUN":
                     log.info("RUN command received")
-                    profile_obj = msgdict.get('profile')
-                    if profile_obj:
+                    if profile_obj := msgdict.get('profile'):
                         profile_json = json.dumps(profile_obj)
                         profile = Profile(profile_json)
                     oven.run_profile(profile)
@@ -157,7 +154,7 @@ def handle_storage():
             message = wsock.receive()
             if not message:
                 break
-            log.debug("websocket (storage) received: %s" % message)
+            log.debug(f"websocket (storage) received: {message}")
 
             try:
                 msgdict = json.loads(message)
@@ -176,16 +173,12 @@ def handle_storage():
                 #wsock.send(get_profiles())
             elif msgdict.get("cmd") == "PUT":
                 log.info("PUT command received")
-                profile_obj = msgdict.get('profile')
-                #force = msgdict.get('force', False)
-                force = True
-                if profile_obj:
+                if profile_obj := msgdict.get('profile'):
+                    #force = msgdict.get('force', False)
+                    force = True
                     #del msgdict["cmd"]
-                    if save_profile(profile_obj, force):
-                        msgdict["resp"] = "OK"
-                    else:
-                        msgdict["resp"] = "FAIL"
-                    log.debug("websocket (storage) sent: %s" % message)
+                    msgdict["resp"] = "OK" if save_profile(profile_obj, force) else "FAIL"
+                    log.debug(f"websocket (storage) sent: {message}")
 
                     wsock.send(json.dumps(msgdict))
                     wsock.send(get_profiles())
@@ -238,12 +231,12 @@ def save_profile(profile, force=False):
     filename = profile['name']+".json"
     filepath = os.path.join(profile_path, filename)
     if not force and os.path.exists(filepath):
-        log.error("Could not write, %s already exists" % filepath)
+        log.error(f"Could not write, {filepath} already exists")
         return False
     with open(filepath, 'w+') as f:
         f.write(profile_json)
         f.close()
-    log.info("Wrote %s" % filepath)
+    log.info(f"Wrote {filepath}")
     return True
 
 def delete_profile(profile):
@@ -251,7 +244,7 @@ def delete_profile(profile):
     filename = profile['name']+".json"
     filepath = os.path.join(profile_path, filename)
     os.remove(filepath)
-    log.info("Deleted %s" % filepath)
+    log.info(f"Deleted {filepath}")
     return True
 
 

@@ -167,10 +167,7 @@ class MAX31856(object):
             # Negative Value.  Scale back by number of bits
             temp_bytes -= 2**(MAX31856.MAX31856_CONST_CJ_BITS -1)
 
-        #        temp_bytes*value of lsb
-        temp_c = temp_bytes*MAX31856.MAX31856_CONST_CJ_LSB
-
-        return temp_c
+        return temp_bytes*MAX31856.MAX31856_CONST_CJ_LSB
 
     @staticmethod
     def _thermocouple_temp_from_bytes(byte0, byte1, byte2):
@@ -198,10 +195,7 @@ class MAX31856(object):
         if byte2 & 0x80:
             temp_bytes -= 2**(MAX31856.MAX31856_CONST_THERM_BITS -1)
 
-        #        temp_bytes*value of LSB
-        temp_c = temp_bytes*MAX31856.MAX31856_CONST_THERM_LSB
-
-        return temp_c
+        return temp_bytes*MAX31856.MAX31856_CONST_THERM_LSB
 
     def read_internal_temp_c(self):
         """
@@ -234,8 +228,7 @@ class MAX31856(object):
 
         TODO: Could update in the future to return human readable values
         """
-        reg = self._read_register(self.MAX31856_REG_READ_FAULT)
-        return reg
+        return self._read_register(self.MAX31856_REG_READ_FAULT)
 
     def _read_register(self, address):
         """
@@ -311,7 +304,7 @@ class MAX31856(object):
     def get(self):
         self.checkErrors()
         celcius = self.read_temp_c()
-        return getattr(self, "to_" + self.units)(celcius)
+        return getattr(self, f"to_{self.units}")(celcius)
 
 
 if __name__ == "__main__":
@@ -323,17 +316,30 @@ if __name__ == "__main__":
     data_pin = 5
     di_pin = 26
     units = "c"
-    thermocouples = []
-    for cs_pin in cs_pins:
-        thermocouples.append(MAX31856(avgsel=0, ac_freq_50hz=True, tc_type=MAX31856.MAX31856_K_TYPE, software_spi={'clk': clock_pin, 'cs': cs_pin, 'do': data_pin, 'di': di_pin}, units=units))
-
+    thermocouples = [
+        MAX31856(
+            avgsel=0,
+            ac_freq_50hz=True,
+            tc_type=MAX31856.MAX31856_K_TYPE,
+            software_spi={
+                'clk': clock_pin,
+                'cs': cs_pin,
+                'do': data_pin,
+                'di': di_pin,
+            },
+            units=units,
+        )
+        for cs_pin in cs_pins
+    ]
     running = True
-    while(running):
+    while running:
         try:
             for thermocouple in thermocouples:
                 rj = thermocouple.read_internal_temp_c()
                 tc = thermocouple.get()
-                print("tc: {} and rj: {}, NC:{} ??:{}".format(tc, rj, thermocouple.noConnection, thermocouple.unknownError))
+                print(
+                    f"tc: {tc} and rj: {rj}, NC:{thermocouple.noConnection} ??:{thermocouple.unknownError}"
+                )
             time.sleep(1)
         except KeyboardInterrupt:
             running = False

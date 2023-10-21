@@ -84,7 +84,7 @@ class OvenWatcher(threading.Thread):
                 try:
                     wsock.send(message_json)
                 except:
-                    log.error("could not write to socket %s"%wsock)
+                    log.error(f"could not write to socket {wsock}")
                     self.observers.remove(wsock)
             else:
                 self.observers.remove(wsock)
